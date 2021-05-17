@@ -3,7 +3,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const ejs = require ("ejs");
 const mongoose = require("mongoose");
-const md5 = require("md5");
+const bcrypt = require("bcrypt");
 
 const app = express();
 app.use(bodyParser.urlencoded({extended: true}));
@@ -35,16 +35,18 @@ app.get("/login", function(req, res){
 });
 
 app.post("/register", function(req, res){
-  const user = new User({
-    email: req.body.username,
-    password: md5(req.body.password)
-  });
-  user.save(function(err){
-    if (err) {
-      console.log(err);
-    } else {
-      res.render("secrets");
-    }
+  bcrypt.hash(req.body.password, 10, function(error, hash) {
+    const user = new User({
+      email: req.body.username,
+      password: hash
+    });
+    user.save(function(err){
+      if (err) {
+        console.log(err);
+      } else {
+        res.render("secrets");
+      }
+    });
   });
 });
 
@@ -54,11 +56,13 @@ app.post("/login", function(req, res){
       console.log(err);
     } else {
       if (foundUser) {
-        if (md5(req.body.password) === foundUser.password){
-          res.render("secrets");
-        } else {
-          console.log("Incorrect password");
-        }
+        bcrypt.compare(req.body.password, foundUser.password, function(error, result) {
+          if (result) {
+            res.render("secrets");
+          } else {
+            console.log("Incorrect password");
+          }
+        });
       } else {
         console.log("User does't exist");
       }
